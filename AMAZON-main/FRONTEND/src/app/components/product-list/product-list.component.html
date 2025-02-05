@@ -1,0 +1,29 @@
+<h2>Liste des produits</h2>
+
+<button [routerLink]="['/products/new']" class="btn btn-primary mb-3">Ajouter un produit</button>
+
+<div *ngIf="error" class="alert alert-danger">
+  {{ error }}
+</div>
+
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>Nom</th>
+      <th>Description</th>
+      <th>Prix</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr *ngFor="let product of products">
+      <td>{{ product.name }}</td>
+      <td>{{ product.description }}</td>
+      <td>{{ product.price | currency }}</td>
+      <td>
+        <button class="btn btn-sm btn-primary mr-2" [routerLink]="['/products/edit', product.id]">Modifier</button>
+        <button class="btn btn-sm btn-danger" (click)="deleteProduct(product.id)">Supprimer</button>
+      </td>
+    </tr>
+  </tbody>
+</table>
