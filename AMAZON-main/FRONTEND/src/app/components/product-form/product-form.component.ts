@@ -1,9 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { ProductService } from '../../services/product.service';
-import { Product } from '../../models/product.model';
 import { CommonModule } from '@angular/common';
+import { Product } from '../../models/product.model';
 
 @Component({
   selector: 'app-product-form',
@@ -14,8 +14,9 @@ import { CommonModule } from '@angular/common';
 })
 export class ProductFormComponent implements OnInit {
   productForm: FormGroup;
-  isEditMode = false;
-  productId?: number;
+  error: string | null = null;
+  isEditMode: boolean = false;
+  productId: number | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -24,19 +25,21 @@ export class ProductFormComponent implements OnInit {
     private route: ActivatedRoute
   ) {
     this.productForm = this.fb.group({
-      name: ['', Validators.required],
-      description: ['', Validators.required],
+      name: ['', [Validators.required, Validators.minLength(3)]],
+      description: ['', [Validators.required, Validators.minLength(10)]],
       price: ['', [Validators.required, Validators.min(0)]],
-      imageUrl: ['']
+      category: ['', Validators.required]
     });
   }
 
   ngOnInit(): void {
-    this.productId = Number(this.route.snapshot.paramMap.get('id'));
-    if (this.productId) {
-      this.isEditMode = true;
-      this.loadProduct(this.productId);
-    }
+    this.route.params.subscribe(params => {
+      if (params['id']) {
+        this.isEditMode = true;
+        this.productId = +params['id'];
+        this.loadProduct(this.productId);
+      }
+    });
   }
 
   loadProduct(id: number): void {
@@ -45,34 +48,38 @@ export class ProductFormComponent implements OnInit {
         this.productForm.patchValue(product);
       },
       error: (error) => {
-        console.error('Erreur lors du chargement du produit:', error);
+        console.error('Error loading product:', error);
+        this.error = 'Failed to load product details.';
       }
     });
   }
 
   onSubmit(): void {
     if (this.productForm.valid) {
-      const product: Product = this.productForm.value;
+      const productData: Product = this.productForm.value;
+      console.log('Submitting form with data:', productData);
       
-      if (this.isEditMode && this.productId) {
-        this.productService.updateProduct(this.productId, product).subscribe({
-          next: () => {
-            this.router.navigate(['/products']);
-          },
-          error: (error) => {
-            console.error('Erreur lors de la mise à jour:', error);
-          }
-        });
-      } else {
-        this.productService.createProduct(product).subscribe({
-          next: () => {
-            this.router.navigate(['/products']);
-          },
-          error: (error) => {
-            console.error('Erreur lors de la création:', error);
-          }
-        });
-      }
+      const operation = this.isEditMode
+        ? this.productService.updateProduct(this.productId!, productData)
+        : this.productService.createProduct(productData);
+
+      operation.subscribe({
+        next: (response) => {
+          console.log('Product operation successful:', response);
+          this.router.navigate(['/products']);
+        },
+        error: (error) => {
+          console.error('Error during product operation:', error);
+          this.error = error.message || 'An error occurred. Please try again.';
+        }
+      });
+    } else {
+      console.log('Form is invalid:', this.productForm.errors);
+      this.error = 'Please fill out all required fields correctly.';
     }
   }
-} 
+
+  onCancel(): void {
+    this.router.navigate(['/products']);
+  }
+}
